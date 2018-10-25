@@ -58,12 +58,10 @@ namespace kvitton_demo2
         }
 
         [FunctionName("GetTextFromImage")]
-        public static async Task<string> GetTextFromImage([ActivityTrigger] string blobName)
+        public static async Task<string> GetTextFromImage([ActivityTrigger] string blobName,
+                                                          [Blob("kvitton/{blobName}", FileAccess.Read, Connection = "BlobConnection")] Stream myBlob)
         {
             var computerVision = GetComputerVisionClient();
-
-            var myBlob = await GetImageStream(blobName);
-            myBlob.Position = 0;
 
             var textHeaders = await computerVision.RecognizeTextInStreamAsync(myBlob, TextRecognitionMode.Printed);
             var operationId = textHeaders.OperationLocation.Substring(textHeaders.OperationLocation.Length - 36);
@@ -77,20 +75,6 @@ namespace kvitton_demo2
             }
 
             return string.Join(Environment.NewLine, result.RecognitionResult.Lines.Select(l => l.Text));
-        }
-
-        private static async Task<MemoryStream> GetImageStream(string blobName)
-        {
-            var storageAccount = CloudStorageAccount.Parse(Environment.GetEnvironmentVariable("BlobConnection"));
-            var myClient = storageAccount.CreateCloudBlobClient();
-            var container = myClient.GetContainerReference("kvitton");
-            var blockBlob = container.GetBlockBlobReference(blobName);
-
-            var myBlob = new MemoryStream();
-
-            await blockBlob.DownloadToStreamAsync(myBlob);
-
-            return myBlob;
         }
 
         private static ComputerVisionClient GetComputerVisionClient()
